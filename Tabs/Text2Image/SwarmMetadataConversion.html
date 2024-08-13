@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
@@ -18,12 +18,20 @@
                         <div class="auto-input auto-checkbox auto-input-flex">
                             <span class="auto-input-name">
                                 <span class="translate" data-pretranslated="Cache">Cache</span>
+                                <span class="auto-input-qbutton info-popover-button" onclick="doPopover('swarmmetadataconversion_settings_cache', arguments[0])">?</span>
                             </span>
                             <input class="auto-checkbox" type="checkbox" data-name="Cache" id="swarmmetadataconversion_settings_cache" data-param_id="cache" checked="true" />
+                        </div>
+                        <div class="sui-popover" id="popover_swarmmetadataconversion_settings_cache" data-visible="false">
+                            <b class="translate">Cache</b>
+                             (boolean):
+                            <br />
+                            <span class="translate slight-left-margin-block">If true, the hashes of the hashes will be stored in cache to make the process faster.</span>
                         </div>
                     </div>
                 </div>
             </div>
+            <button onclick="doRequest(false)">Click me!</button>
         </div>
     </div>
 </body>

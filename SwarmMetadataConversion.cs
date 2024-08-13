@@ -3,6 +3,7 @@ using SwarmUI.Utils;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using Newtonsoft.Json;
+using Jelosus1.Extensions.SwarmMetadataConverter;
 
 namespace Jelosus1.Extensions.SwarmMetadataConversion;
 
@@ -12,6 +13,11 @@ public class SwarmMetadataConversion : Extension
     public override void OnInit()
     {
         Logs.Init("SwarmMetadataConverter is ready!");
+
+        ScriptFiles.Add("js/SwarmMetadataConverter.js");
+        ExtensionAPI.Register();
+
+        Logs.Info(Path.Join(FilePath.Replace("/", ""), @".."));
 
         string settingsFile = Path.Join(FilePath, "settings.json");
 
@@ -28,9 +34,5 @@ public class SwarmMetadataConversion : Extension
             File.WriteAllText(settingsFile, jsonString);
         }
 
-        JObject settingsObj = JObject.Parse(File.ReadAllText(settingsFile));
-
-        Logs.Info(settingsObj["cache"].ToString());
-        Logs.Info(settingsObj["saveDirectory"].ToString());
     }
 }
