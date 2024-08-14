@@ -96,7 +96,7 @@ public class ImgMetadataConverter : Extension
                 }
             }
 
-            NetworkBackendUtils.DoSelfStart(FilePath + "convert_metadata.py", "ImgMetadataConverter", "imgmetadataconverter", 0, "{PORT}", s => Status = s, Check, (p, r) => { Port = p; RunningProcess = r; }, () => Status, a => ShutDownEvent += a).Wait();
+            NetworkBackendUtils.DoSelfStart(FilePath + "convert_metadata.py", "ImgMetadataConverter", "imgmetadataconverter", "0", "{PORT}", s => Status = s, Check, (p, r) => { Port = p; RunningProcess = r; }, () => Status, a => ShutDownEvent += a).Wait();
         }
     }
 
