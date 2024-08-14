@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>ImgMetadataConverter</title>
+</head>
+<body>
+    <div class="tab-pane tab-pane-vw active show" id="imgmetadataconverter_tab" role="tabpanel" aria-labelledby="maintab_imgmetadataconverter">
+        <ul class="nav nav-tabs" role="tablist" id="imgmetadataconvertertablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="#imgmetadataconverter-settings" aria-selected="true" role="tab">Settings</a>
+            </li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane show active" id="imgmetadataconverter-settings" role="tabpanel">
+                <div class="settings-container">
+                    <div id="imgmetadataconverter_settings_contrainer">
+                        <div class="auto-input auto-checkbox auto-input-flex">
+                            <span class="auto-input-name">
+                                <span class="translate" data-pretranslated="Cache">Cache</span>
+                                <span class="auto-input-qbutton info-popover-button" onclick="doPopover('imgmetadataconverter_settings_cache', arguments[0])">?</span>
+                            </span>
+                            <input class="auto-checkbox" type="checkbox" data-name="Cache" id="imgmetadataconverter_settings_cache" data-param_id="cache" checked="true" />
+                        </div>
+                        <div class="sui-popover" id="popover_imgmetadataconverter_settings_cache" data-visible="false">
+                            <b class="translate">Cache</b>
+                            (boolean):
+                            <br />
+                            <span class="translate slight-left-margin-block">If true, the hashes of the hashes will be stored in cache to make the process faster.</span>
+                        </div>
+                        <div class="auto-input auto-text-box auto-input-flex auto-input-flex-wide">
+                            <label>
+                                <span class="auto-input-name">
+                                    <span class="translate" data-pretranslated="OutputDirectory">OutputDirectory</span>
+                                    <span class="auto-input-qbutton info-popover-button" onclick="doPopover('imgmetadataconverter_settings_outputdirectory', arguments[0])">?</span>
+                                </span>
+                            </label>
+                            <textarea class="auto-text translate translate-no-text" id="imgmetadataconverter_settings_outputdirectory" data-param_id="outputdirectory" rows="1" placeholder="The directory where the images with the metadata converted will be stored" data-name="OutputDirectory" autocomplete="false"></textarea>
+                        </div>
+                        <div class="sui-popover" id="popover_imgmetadataconverter_settings_outputdirectory">
+                            <b class="translate">OutputDirectory</b>
+                             (text):
+                            <br />
+                            <span class="translate slight-left-margin-block">The directory where the images with the metadata converted will be stored</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="settings_submit_confirmer" id="imgmetadataconverter_settings_confirmer" style="display: none;">
+            <span class="settings_submit_confirmer_text">
+                Save 
+                <span id="imgmetadataconverter_settings_edit_count">0</span>
+                 edited setting(s)?
+            </span>
+            <button type="button" class="btn btn-primary basic-button translate" onclick="saveImgMetadataConverterSettings()">Save</button>
+            <button type="button" class="btn btn-secondary basic-button translate" onclick="cancelImgMetadataConverterSettingChange()">Cancel</button>
+        </div>
+    </div>
+</body>
+</html>
