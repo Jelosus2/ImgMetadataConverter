@@ -1,16 +1,8 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import sys, json, base64
+from pymodules.metadata_conversion import MetadataConverter
 from pathlib import Path
-from io import BytesIO
-from PIL import Image, PngImagePlugin
+import sys, json
 
-LOG_TEXT = ""
-
-def log(text):
-    global LOG_TEXT
-    LOG_TEXT += text + "\n"
-    print(text)
-    
 class Handler(BaseHTTPRequestHandler):
     def good_response(self, data):
         self.send_response(200)
@@ -21,13 +13,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("content-length"))
         message = json.loads(self.rfile.read(length))
-        if self.path == "/API/TODO":
-            "GRAAAH"
+        if self.path == "/API/Alive":
+            self.good_response({'result': 'success'})
         elif self.path == "/API/ConvertMetadata":
-            global LOG_TEXT
-            imgs = [Image.open(BytesIO(base64.b64decode(message['image']))).convert('RGB')]
-            for img in imgs:
-                ""
+            metadata_converter = MetadataConverter()
+            result, metadata_string, error_message = metadata_converter.generate_new_metadata(message['userInput'], message['subfolders'], message['settings'])
+            if result:
+                self.good_response({'result': 'success', 'metadata': metadata_string})
+            else:
+                self.good_response({'result': 'fail', 'error': error_message})
         else:
             self.send_response(404)
             self.end_headers()
@@ -41,7 +35,7 @@ class Handler(BaseHTTPRequestHandler):
 def run(port):
     server_address = ('', port)
     httpd = HTTPServer(server_address, Handler)
-    log(f'Running on port {port}')
+    print(f'Running on port {port}')
 
     try:
         httpd.serve_forever()

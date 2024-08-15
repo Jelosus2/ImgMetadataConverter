@@ -15,10 +15,11 @@ namespace ImgMetadataConverter;
 public class ImgMetadataConverter : Extension
 {
     public static Action ShutDownEvent;
+    public static string settingsFile = Utils.settingsFile;
 
     public override void OnInit()
     {
-        Logs.Init("ImgMetadataConverter is ready!");
+        Logs.Init("[ImgMetadataConverter] loaded");
 
         ScriptFiles.Add("js/ImgMetadataConverter.js");
         Logs.Debug("[ImgMetadataConverter] Added the script files.");
@@ -26,8 +27,10 @@ public class ImgMetadataConverter : Extension
         ImgMetadataConverterAPI.Register();
         Logs.Debug("[ImgMetadataConverter] Registered API callbacks.");
 
-        string settingsFile = Utils.settingsFile;
-
+        if (!Path.Exists(Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, FilePath, "venv")))
+        {
+            Utils.CreateVenvAndInstallDependencies();
+        }
         if (!Path.Exists(settingsFile))
         {
             JObject defaultSettings = new JObject()
@@ -84,7 +87,7 @@ public class ImgMetadataConverter : Extension
             {
                 try
                 {
-                    if (await DoPostRequest("API/ImgMedataConverterPing", []) != null)
+                    if (await DoPostRequest("API/Alive", []) != null)
                     {
                         Status = BackendStatus.RUNNING;
                     }
@@ -96,7 +99,7 @@ public class ImgMetadataConverter : Extension
                 }
             }
 
-            NetworkBackendUtils.DoSelfStart(FilePath + "convert_metadata.py", "ImgMetadataConverter", "imgmetadataconverter", "0", "{PORT}", s => Status = s, Check, (p, r) => { Port = p; RunningProcess = r; }, () => Status, a => ShutDownEvent += a).Wait();
+            NetworkBackendUtils.DoSelfStart(FilePath + "httpserver.py", "ImgMetadataConverter", "imgmetadataconverter", "0", "{PORT}", s => Status = s, Check, (p, r) => { Port = p; RunningProcess = r; }, () => Status, a => ShutDownEvent += a).Wait();
         }
     }
 
@@ -105,13 +108,37 @@ public class ImgMetadataConverter : Extension
         return (await (await WebClient.PostAsync($"http://localhost:{Port}/{url}", Utilities.JSONContent(data))).Content.ReadAsStringAsync()).ParseToJson();
     }
 
-    public async Task ConvertImgMetadata(Image img, JObject userInput, JObject subfolders)
+    public async Task<JObject> GetImageMetadata(JObject userInput, JObject subfolders, JObject settings)
     {
         EnsureActive();
+        JObject result = await DoPostRequest("API/ConvertMetadata", new() { ["userInput"] = userInput, ["subfolders"] = subfolders, ["settings"] = settings });
+
+        return result;
     }
 
     public void PostGenerationEvent(T2IEngine.PostGenerationEventParams param)
     {
-        
+        JObject settings = JObject.Parse(File.ReadAllText(settingsFile));
+        JObject response = GetImageMetadata(param.UserInput.ToJSON(), Utils.parsedSubfolders(), settings).Result;
+
+        if (response.TryGetValue("result", out JToken result) && result.ToString() == "fail")
+        {
+            Logs.Error(response.GetValue("error").ToString());
+            param.RefuseImage();
+        }
+        else
+        {
+            if (response.TryGetValue("metadata", out JToken metadata))
+            {
+                string format = param.UserInput.Get(T2IParamTypes.ImageFormat, param.UserInput.SourceSession.User.Settings.FileFormat.ImageFormat);
+                Image image = param.Image.ConvertTo(format, param.UserInput.SourceSession.User.Settings.FileFormat.SaveMetadata ? metadata.ToString() : null, param.UserInput.SourceSession.User.Settings.FileFormat.DPI);
+                Utils.CustomSaveImage(image, 1, param.UserInput, metadata.ToString(), param.UserInput.SourceSession.User, Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, settings["outputDirectory"].ToString()));
+            }
+            else
+            {
+                Logs.Error("Some unexpected error");
+                param.RefuseImage();
+            }
+        }
     }
 }
