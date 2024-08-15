@@ -15,7 +15,7 @@ namespace ImgMetadataConverter;
 public class ImgMetadataConverter : Extension
 {
     public static Action ShutDownEvent;
-    public static string settingsFile = Utils.settingsFile;
+    public string settingsFile = Utils.settingsFile;
 
     public override void OnInit()
     {
@@ -27,16 +27,12 @@ public class ImgMetadataConverter : Extension
         ImgMetadataConverterAPI.Register();
         Logs.Debug("[ImgMetadataConverter] Registered API callbacks.");
 
-        if (!Path.Exists(Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, FilePath, "venv")))
-        {
-            Utils.CreateVenvAndInstallDependencies();
-        }
         if (!Path.Exists(settingsFile))
         {
             JObject defaultSettings = new JObject()
             {
                 ["cache"] = true,
-                ["outputDirectory"] = Program.ServerSettings.Paths.OutputPath
+                ["outputDirectory"] = "[SwarmUI.OutputPath]"
             };
 
             string jsonString = JsonConvert.SerializeObject(defaultSettings, Formatting.Indented);
@@ -119,26 +115,28 @@ public class ImgMetadataConverter : Extension
     public void PostGenerationEvent(T2IEngine.PostGenerationEventParams param)
     {
         JObject settings = JObject.Parse(File.ReadAllText(settingsFile));
-        JObject response = GetImageMetadata(param.UserInput.ToJSON(), Utils.parsedSubfolders(), settings).Result;
+        try
+        {
+            JObject response = GetImageMetadata(param.UserInput.ToJSON(), Utils.parsedSubfolders(), settings).Result;
 
-        if (response.TryGetValue("result", out JToken result) && result.ToString() == "fail")
-        {
-            Logs.Error(response.GetValue("error").ToString());
-            param.RefuseImage();
-        }
-        else
-        {
-            if (response.TryGetValue("metadata", out JToken metadata))
+            if (response.TryGetValue("result", out JToken result) && result.ToString() == "fail")
             {
-                string format = param.UserInput.Get(T2IParamTypes.ImageFormat, param.UserInput.SourceSession.User.Settings.FileFormat.ImageFormat);
-                Image image = param.Image.ConvertTo(format, param.UserInput.SourceSession.User.Settings.FileFormat.SaveMetadata ? metadata.ToString() : null, param.UserInput.SourceSession.User.Settings.FileFormat.DPI);
-                Utils.CustomSaveImage(image, 1, param.UserInput, metadata.ToString(), param.UserInput.SourceSession.User, Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, settings["outputDirectory"].ToString()));
+                Logs.Error($"[ImgMetadataConverter] {response.GetValue("error").ToString()}");
             }
             else
             {
-                Logs.Error("Some unexpected error");
-                param.RefuseImage();
+                if (response.TryGetValue("metadata", out JToken metadata))
+                {
+                    string format = param.UserInput.Get(T2IParamTypes.ImageFormat, param.UserInput.SourceSession.User.Settings.FileFormat.ImageFormat);
+                    Image image = param.Image.ConvertTo(format, param.UserInput.SourceSession.User.Settings.FileFormat.SaveMetadata ? metadata.ToString() : null, param.UserInput.SourceSession.User.Settings.FileFormat.DPI);
+                    string outputDirectory = settings["outputDirectory"].ToString().Replace("[SwarmUI.OutputPath]", Program.ServerSettings.Paths.OutputPath);
+                    Utils.CustomSaveImage(image, 1, param.UserInput, metadata.ToString(), param.UserInput.SourceSession.User, Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, outputDirectory));
+                }
             }
+        }
+        catch (Exception e)
+        {
+            Logs.Error($"Something unexpected ocurred: {e}");
         }
     }
 }

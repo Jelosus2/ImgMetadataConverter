@@ -6,7 +6,9 @@ import json
 class MetadataConverter():
     cache_path = Path(Path(__file__).parent.parent, "cache.json")
 
-    def generate_new_metadata(self, generation_params: object, subfolders: object, settings: object) -> tuple[bool, str, str]:
+    def generate_new_metadata(self, generation_params: dict, subfolders: object, settings: object) -> tuple[bool, str, str]:
+        exclude_list = {"prompt", "negativeprompt", "cfgscale", "steps", "sampler", "scheduler", "seed", "width", "height", "model", "loras"}
+
         prompt = generation_params["prompt"]
         negative_prompt = generation_params.get("negativeprompt", "")
         cfg = generation_params["cfgscale"]
@@ -20,7 +22,7 @@ class MetadataConverter():
         errors = ""
 
         model_hash, model_errors = self.model_hash_generation(model, subfolders, settings)
-        lora_hashes, lora_errors = self.lora_hash_generation(generation_params.get("loras", []), subfolders, settings)
+        lora_hashes, lora_errors = self.lora_hash_generation(generation_params.get("loras", ""), subfolders, settings)
 
         if model_errors:
             errors += model_errors
@@ -34,6 +36,10 @@ class MetadataConverter():
           return False, "", errors
         
         new_metadata_string = f"{prompt}\nNegative prompt: {negative_prompt}\nSteps: {steps}, Sampler: {sampler}, Schedule type: {scheduler}, CFG scale: {cfg}, Seed: {seed}, Size: {size}, Model hash: {model_hash}, Model: {model},{lora_hashes}"
+
+        for key, value in generation_params.items():
+            if (key not in exclude_list):
+                new_metadata_string += f" {key}: {value},"
 
         return True, new_metadata_string, ""
 
@@ -59,14 +65,13 @@ class MetadataConverter():
         else:
             return self.generate_hash(matching_unet_checkpoint[0], settings), ""
 
-    def lora_hash_generation(self, lora_list: list[str], subfolders: object, settings: object) -> tuple[str, str]:
-        if len(lora_list) == 0:
+    def lora_hash_generation(self, loras: str, subfolders: object, settings: object) -> tuple[str, str]:
+        if loras == "":
             return "", ""
         
+        lora_list = loras.split(",")
+        
         lora_dir = Path(subfolders["Lora"])
-
-        print(lora_list)
-        print(lora_dir)
 
         if not lora_dir.exists():
             return "", "LoRAs were detected in the metadata but didn't find the LoRA folder."
@@ -74,7 +79,6 @@ class MetadataConverter():
         lora_hashes = ' Lora hashesh: "'
 
         for index, lora in enumerate(lora_list):
-            print(lora)
             lora_name = lora.split("/")[-1]
             matching_loras = [file for ext in (f"{lora_name}.safetensors", f"{lora_name}.ckpt") for file in lora_dir.rglob(ext)]
 
@@ -119,6 +123,8 @@ class MetadataConverter():
             cache_obj[filename.stem] = digested_hash
             with open(self.cache_path, "w", encoding="utf-8") as cache_file:
                 json.dump(cache_obj, cache_file, indent=2)
+
+        print(f"Calculated hash for {filename.stem}: {digested_hash}")
 
         return digested_hash
 

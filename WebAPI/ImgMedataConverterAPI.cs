@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using SwarmUI.Accounts;
 using SwarmUI.Core;
+using SwarmUI.Utils;
 using SwarmUI.WebAPI;
 using System.IO;
 
@@ -19,7 +20,8 @@ public static class ImgMetadataConverterAPI
     [API.APIDescription("Saves the configuration for the ImgMetadataConverter extension",
         """
         {
-            "success": bool
+            "success": bool,
+            "error": string 
         }
         """)]
     public static async Task<JObject> SaveImgMetadataConverterSettings(
@@ -30,34 +32,62 @@ public static class ImgMetadataConverterAPI
         JObject newSettings = new JObject()
         {
             ["cache"] = cache,
-            ["outputDirectory"] = string.IsNullOrEmpty(outputDirectory) ? Program.ServerSettings.Paths.OutputPath : outputDirectory
+            ["outputDirectory"] = string.IsNullOrEmpty(outputDirectory) ? "[SwarmUI.OutputPath]" : Utils.ReplaceInvalidCharsInPath(outputDirectory)
         };
 
-        string jsonString = JsonConvert.SerializeObject(newSettings, Formatting.Indented);
-        File.WriteAllText(Utils.settingsFile, jsonString);
-
-        return new JObject()
+        try
         {
-            ["success"] = true
-        };
+            string jsonString = JsonConvert.SerializeObject(newSettings, Formatting.Indented);
+            File.WriteAllText(Utils.settingsFile, jsonString);
+
+            return new JObject()
+            {
+                ["success"] = true
+            };
+        }
+        catch (Exception e) 
+        {
+            Logs.Debug($"{e}");
+            return new JObject()
+            {
+                ["success"] = false,
+                ["error"] = $"Error saving the settings. Check the logs for more information"
+            };    
+        }
     }
 
     [API.APIDescription("Loads the configuration of the ImgMetadataConverter extension",
         """
         {
+            "success": bool,
             "cache": bool,
-            "outputDirectory": string
+            "outputDirectory": string,
+            "error": string
         }
         """)]
     public static async Task<JObject> LoadImgMetadataConverterSettings(Session session)
     {
-        JObject settingsObj = JObject.Parse(File.ReadAllText(Utils.settingsFile));
-
-        return new JObject()
+        try
         {
-            ["cache"] = settingsObj["cache"],
-            ["outputDirectory"] = settingsObj["outputDirectory"]
-        };
+            JObject settingsObj = JObject.Parse(File.ReadAllText(Utils.settingsFile));
+
+            return new JObject()
+            {
+                ["success"] = true,
+                ["cache"] = settingsObj["cache"],
+                ["outputDirectory"] = settingsObj["outputDirectory"]
+            };
+        }
+        catch (Exception e)
+        {
+
+            Logs.Debug($"{e}");
+            return new JObject()
+            {
+                ["success"] = false,
+                ["error"] = $"Error loading the settings. Check the logs for more information"
+            };
+        }
     }
 }
 
