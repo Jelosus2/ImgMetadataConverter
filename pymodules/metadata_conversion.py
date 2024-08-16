@@ -54,8 +54,8 @@ class MetadataConverter():
         
         model_name = model.split("/")[-1]
 
-        matching_sd_checkpoint = [file for ext in (f"{model_name}.safetensors", f"{model_name}.ckpt") for file in sd_dir.rglob(ext)]
-        matching_unet_checkpoint = [file for ext in (f"{model_name}.safetensors", f"{model_name}.ckpt") for file in sd_dir.rglob(ext)]
+        matching_sd_checkpoint = [file for ext in (f"{model_name}.safetensors", f"{model_name}.ckpt", f"{model_name}.sft") for file in sd_dir.rglob(ext)]
+        matching_unet_checkpoint = [file for ext in (f"{model_name}.safetensors", f"{model_name}.ckpt", f"{model_name}.sft") for file in sd_dir.rglob(ext)]
 
         if len(matching_sd_checkpoint) == 0 and len(matching_unet_checkpoint) == 0:
             return "", "No Checkpoint found in Stable-Diffusion and unet folders"

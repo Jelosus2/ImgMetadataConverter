@@ -1,4 +1,5 @@
-﻿const cache = document.getElementById("imgmetadataconverter_settings_cache");
+﻿const active = document.getElementById("imgmetadataconverter_settings_active");
+const cache = document.getElementById("imgmetadataconverter_settings_cache");
 const outputDirectory = document.getElementById("imgmetadataconverter_settings_outputdirectory");
 const imgMetadataConverterConfirmer = document.getElementById("imgmetadataconverter_settings_confirmer");
 const imgMetadataConverterCount = document.getElementById("imgmetadataconverter_settings_edit_count");
@@ -11,25 +12,25 @@ let imgMetadataConverterData = {
 
 function loadImgMetadataConverterSettings() {
     genericRequest("LoadImgMetadataConverterSettings", {}, data => {
+        console.log(data)
         if (!data.success) {
             imgMetadataConverterError.value = data.error;
             imgMetadataConverterError.style.display = "block";
-            cache.checked = true;
-            outputDirectory.value = "Output";
-            imgMetadataConverterData.known.cache = true;
-            imgMetadataConverterData.known.outputDirectory = "Output"
         } else {
             imgMetadataConverterError.style.display = "none";
-            cache.checked = data.cache;
-            outputDirectory.value = data.outputDirectory;
-            imgMetadataConverterData.known.cache = data.cache;
-            imgMetadataConverterData.known.outputDirectory = data.outputDirectory;
         }
+        
+        active.checked = data.active;
+        cache.checked = data.cache;
+        outputDirectory.value = data.outputDirectory;
+        imgMetadataConverterData.known.active = data.active;
+        imgMetadataConverterData.known.cache = data.cache;
+        imgMetadataConverterData.known.outputDirectory = data.outputDirectory;
     });
 }
 
 function saveImgMetadataConverterSettings() {
-    genericRequest("SaveImgMetadataConverterSettings", { cache: cache.checked, outputDirectory: outputDirectory.value }, data => {
+    genericRequest("SaveImgMetadataConverterSettings", { active: active.checked, cache: cache.checked, outputDirectory: outputDirectory.value }, data => {
         imgMetadataConverterConfirmer.style.display = "none";
         imgMetadataConverterData.known = {};
         imgMetadataConverterData.altered = {};
@@ -45,6 +46,7 @@ function saveImgMetadataConverterSettings() {
 }
 
 function cancelImgMetadataConverterSettingChange() {
+    active.checked = imgMetadataConverterData.known.active;
     cache.checked = imgMetadataConverterData.known.cache;
     outputDirectory.value = imgMetadataConverterData.known.outputDirectory;
     imgMetadataConverterConfirmer.style.display = "none";
@@ -52,6 +54,18 @@ function cancelImgMetadataConverterSettingChange() {
 }
 
 document.getElementById("maintab_imgmetadataconverter").addEventListener("click", () => loadImgMetadataConverterSettings());
+
+active.addEventListener("input", () => {
+    if (active.checked == imgMetadataConverterData.known.active) {
+        delete imgMetadataConverterData.altered.active;
+    } else {
+        imgMetadataConverterData.altered.active = active.checked;
+    }
+
+    let count = Object.keys(imgMetadataConverterData.altered).length;
+    imgMetadataConverterCount.innerText = count;
+    imgMetadataConverterConfirmer.style.display = count == 0 ? "none" : "block";
+});
 
 cache.addEventListener("input", () => {
     if (cache.checked == imgMetadataConverterData.known.cache) {

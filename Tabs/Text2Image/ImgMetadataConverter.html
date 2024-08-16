@@ -17,6 +17,19 @@
                     <div id="imgmetadataconverter_settings_contrainer">
                         <div class="auto-input auto-checkbox auto-input-flex">
                             <span class="auto-input-name">
+                                <span class="translate" data-pretranslated="Active">Active</span>
+                                <span class="auto-input-qbutton info-popover-button" onclick="doPopover('imgmetadataconverter_settings_active', arguments[0])">?</span>
+                            </span>
+                            <input class="auto-checkbox" type="checkbox" data-name="Active" id="imgmetadataconverter_settings_active" data-param_id="imgmetadataconverteractive" />
+                        </div>
+                        <div class="sui-popover" id="popover_imgmetadataconverter_settings_active" data-visible="false">
+                            <b class="translate">Active</b>
+                            (boolean):
+                            <br />
+                            <span class="translate slight-left-margin-block">If true, the extension will be activated.</span>
+                        </div>
+                        <div class="auto-input auto-checkbox auto-input-flex">
+                            <span class="auto-input-name">
                                 <span class="translate" data-pretranslated="Cache">Cache</span>
                                 <span class="auto-input-qbutton info-popover-button" onclick="doPopover('imgmetadataconverter_settings_cache', arguments[0])">?</span>
                             </span>
@@ -35,11 +48,11 @@
                                     <span class="auto-input-qbutton info-popover-button" onclick="doPopover('imgmetadataconverter_settings_outputdirectory', arguments[0])">?</span>
                                 </span>
                             </label>
-                            <textarea class="auto-text translate translate-no-text" id="imgmetadataconverter_settings_outputdirectory" data-param_id="outputdirectory" rows="1" placeholder="The directory where the images with the metadata converted will be stored" data-name="OutputDirectory" autocomplete="false"></textarea>
+                            <textarea class="auto-text translate translate-no-text" id="imgmetadataconverter_settings_outputdirectory" data-param_id="outputdirectory" rows="1" placeholder="The directory where the images with the metadata converted will be stored" data-name="OutputDirectory" autocomplete="false">[SwarmUI.OutputPath]</textarea>
                         </div>
                         <div class="sui-popover" id="popover_imgmetadataconverter_settings_outputdirectory">
                             <b class="translate">OutputDirectory</b>
-                             (text):
+                            (text):
                             <br />
                             <span class="translate slight-left-margin-block">
                                 The directory where the images with the metadata converted will be stored
@@ -50,7 +63,7 @@
                     </div>
                 </div>
             </div>
-            <span id="imgmetadataconverter_settings_error" class="translate" style="color: red;display: none;">Error</span>
+            <span id="imgmetadataconverter_settings_error" class="translate" style="display: none;">Error</span>
         </div>
         <div class="settings_submit_confirmer" id="imgmetadataconverter_settings_confirmer" style="display: none;">
             <span class="settings_submit_confirmer_text">

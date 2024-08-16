@@ -33,16 +33,24 @@ public static class Utils
         return subfoldersObj;
     }
 
-    public static string ReplaceInvalidCharsInPath(string path)
+    public static string PathCleanUp(string path)
     {
-        return string.Join("_", path.Split(Path.GetInvalidPathChars()));
+        path = Utilities.FilePathForbidden.TrimToNonMatches(path.Replace('\\', '/'));
+        while (path.Contains("//"))
+        {
+            path = path.Replace("//", "/");
+        }
+        path = path.Trim();
+        string[] parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+     
+        return parts.JoinString("/");
     }
 
     public static void CustomSaveImage(Image image, int batchIndex, T2IParamInput userInput, string metadata, User user, string outputDirectory)
     {
         if (!user.Settings.SaveFiles)
         {
-            Logs.Warning("You have the option SaveFiles disabled in your user settings, skipping conversion...");
+            Logs.Warning("[ImgMetadataConverter] You have the option SaveFiles disabled in your user settings, skipping conversion...");
             return;
         }
         string rawImagePath = user.BuildImageOutputPath(userInput, batchIndex);
@@ -93,7 +101,7 @@ public static class Utils
                 }
                 catch (Exception ex)
                 {
-                    Logs.Error($"Could not save user image (to '{pathA}' nor to '{fullPath}': first error '{e1.Message}', second error '{ex.Message}'");
+                    Logs.Error($"[ImgMetadataConverter] Could not save user image (to '{pathA}' nor to '{fullPath}': first error '{e1.Message}', second error '{ex.Message}'");
                     return;
                 }
             }

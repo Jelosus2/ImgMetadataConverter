@@ -31,6 +31,7 @@ public class ImgMetadataConverter : Extension
         {
             JObject defaultSettings = new JObject()
             {
+                ["active"] = false,
                 ["cache"] = true,
                 ["outputDirectory"] = "[SwarmUI.OutputPath]"
             };
@@ -115,13 +116,19 @@ public class ImgMetadataConverter : Extension
     public void PostGenerationEvent(T2IEngine.PostGenerationEventParams param)
     {
         JObject settings = JObject.Parse(File.ReadAllText(settingsFile));
+
+        if (!(bool)settings["active"])
+        {
+            return;
+        }
+
         try
         {
             JObject response = GetImageMetadata(param.UserInput.ToJSON(), Utils.parsedSubfolders(), settings).Result;
 
             if (response.TryGetValue("result", out JToken result) && result.ToString() == "fail")
             {
-                Logs.Error($"[ImgMetadataConverter] {response.GetValue("error").ToString()}");
+                Logs.Error($"[ImgMetadataConverter] {response.GetValue("error")}");
             }
             else
             {
@@ -136,7 +143,7 @@ public class ImgMetadataConverter : Extension
         }
         catch (Exception e)
         {
-            Logs.Error($"Something unexpected ocurred: {e}");
+            Logs.Error($"[ImgMetadataConverter] Something unexpected ocurred: {e}");
         }
     }
 }

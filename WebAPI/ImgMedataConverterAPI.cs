@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SwarmUI.Accounts;
-using SwarmUI.Core;
 using SwarmUI.Utils;
 using SwarmUI.WebAPI;
 using System.IO;
@@ -26,13 +25,15 @@ public static class ImgMetadataConverterAPI
         """)]
     public static async Task<JObject> SaveImgMetadataConverterSettings(
         Session session,
+        [API.APIParameter("Whenever activate the extension or not")] bool active,
         [API.APIParameter("Whenever cache or not the resource hashes")] bool cache,
         [API.APIParameter("The directory to save the images with the changed metadata")] string outputDirectory)
     {
         JObject newSettings = new JObject()
         {
+            ["active"] = active,
             ["cache"] = cache,
-            ["outputDirectory"] = string.IsNullOrEmpty(outputDirectory) ? "[SwarmUI.OutputPath]" : Utils.ReplaceInvalidCharsInPath(outputDirectory)
+            ["outputDirectory"] = string.IsNullOrEmpty(outputDirectory) ? "[SwarmUI.OutputPath]" : Utils.PathCleanUp(outputDirectory)
         };
 
         try
@@ -51,7 +52,7 @@ public static class ImgMetadataConverterAPI
             return new JObject()
             {
                 ["success"] = false,
-                ["error"] = $"Error saving the settings. Check the logs for more information"
+                ["error"] = "Error saving the settings. Check the logs for more information"
             };    
         }
     }
@@ -74,6 +75,7 @@ public static class ImgMetadataConverterAPI
             return new JObject()
             {
                 ["success"] = true,
+                ["active"] = settingsObj["active"],
                 ["cache"] = settingsObj["cache"],
                 ["outputDirectory"] = settingsObj["outputDirectory"]
             };
@@ -85,7 +87,7 @@ public static class ImgMetadataConverterAPI
             return new JObject()
             {
                 ["success"] = false,
-                ["error"] = $"Error loading the settings. Check the logs for more information"
+                ["error"] = "Error loading the settings, loading defaults instead. Check the logs for more information"
             };
         }
     }
