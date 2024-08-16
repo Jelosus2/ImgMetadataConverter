@@ -3,7 +3,6 @@ const cache = document.getElementById("imgmetadataconverter_settings_cache");
 const outputDirectory = document.getElementById("imgmetadataconverter_settings_outputdirectory");
 const imgMetadataConverterConfirmer = document.getElementById("imgmetadataconverter_settings_confirmer");
 const imgMetadataConverterCount = document.getElementById("imgmetadataconverter_settings_edit_count");
-const imgMetadataConverterError = document.getElementById("imgmetadataconverter_settings_error");
 
 let imgMetadataConverterData = {
     known: {},
@@ -12,14 +11,6 @@ let imgMetadataConverterData = {
 
 function loadImgMetadataConverterSettings() {
     genericRequest("LoadImgMetadataConverterSettings", {}, data => {
-        console.log(data)
-        if (!data.success) {
-            imgMetadataConverterError.value = data.error;
-            imgMetadataConverterError.style.display = "block";
-        } else {
-            imgMetadataConverterError.style.display = "none";
-        }
-        
         active.checked = data.active;
         cache.checked = data.cache;
         outputDirectory.value = data.outputDirectory;
@@ -35,13 +26,6 @@ function saveImgMetadataConverterSettings() {
         imgMetadataConverterData.known = {};
         imgMetadataConverterData.altered = {};
         loadImgMetadataConverterSettings();
-
-        if (!data.success) {
-            imgMetadataConverterError.value = data.error;
-            imgMetadataConverterError.style.display = "block";
-        } else {
-            imgMetadataConverterError.style.display = "none";
-        }
     });
 }
 
