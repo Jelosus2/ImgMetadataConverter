@@ -1,16 +1,19 @@
 ﻿using FreneticUtilities.FreneticExtensions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SwarmUI.Accounts;
 using SwarmUI.Core;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace ImgMetadataConverter;
 
 public static class Utils
 {
     public static readonly string settingsFile = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, "src/Extensions/ImgMetadataConverter", "settings.json");
+    public static readonly string cacheFile = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, "src/Extensions/ImgMetadataConverter", "cache.json");
     public static readonly JObject subfolders = new()
     {
         ["SDLoraFolder"] = "Lora",
@@ -19,15 +22,13 @@ public static class Utils
     };
     private static readonly Settings.PathsData paths = Program.ServerSettings.Paths;
 
-    public static JObject parsedSubfolders()
+    public static JObject ParsedSubfolders()
     {
-        JObject subfoldersObj = new();
+        JObject subfoldersObj = [];
 
         foreach ((string key, JToken val) in subfolders)
         {
-            subfoldersObj[$"{val}"] = paths.GetFieldValueOrDefault<string>(key) != null
-                ? Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, paths.ModelRoot, paths.GetFieldValueOrDefault<string>(key))
-                : Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, paths.ModelRoot, key);
+            subfoldersObj[$"{val}"] = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, paths.ModelRoot, paths.GetFieldValueOrDefault<string>(key) ?? key);
         }
 
         return subfoldersObj;
@@ -44,6 +45,203 @@ public static class Utils
         string[] parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
      
         return parts.JoinString("/");
+    }
+
+    public static void CreateCacheFile()
+    {
+        File.WriteAllText(cacheFile, "{}");
+    }
+
+    public static string FormatMetadata(JObject userInput, JObject settings)
+    {
+        HashSet<string> excludeParams = ["prompt", "negativeprompt", "cfgscale", "steps", "sampler", "scheduler", "seed", "width", "height", "model", "loras"];
+
+        string prompt = userInput.Value<string>("prompt");
+        string negativePrompt = userInput.Value<string>("negativeprompt") ?? "";
+        string cfgScale = userInput.Value<string>("cfgscale");
+        string steps = userInput.Value<string>("steps");
+        string sampler = userInput.Value<string>("sampler") ?? "euler";
+        string scheduler = userInput.Value<string>("scheduler") ?? "normal";
+        string seed = userInput.Value<string>("seed");
+        string size = $"{userInput.Value<string>("width")}x{userInput.Value<string>("height")}";
+        string model = userInput.Value<string>("model");
+
+        string loraHashes = LoraHashStringBuilder(userInput.Value<string>("loras")?.Split(",") ?? [], settings.Value<bool>("cache")) ?? "";
+        string modelHash = CalculateModelHash(model, settings.Value<bool>("cache"));
+
+        if (loraHashes == "lora-error" || modelHash == "model-error")
+        {
+            return null;
+        }
+
+        string newMetadataString = $"{prompt}\nNegative prompt: {negativePrompt}\nSteps: {steps}, Sampler: {sampler}, Schedule type: {scheduler}, CFG scale: {cfgScale}, Seed: {seed}, Size: {size}, Model hash: {modelHash}, Model: {model},{loraHashes}";
+
+        foreach ((string key, JToken val) in userInput)
+        {
+            if (!excludeParams.Contains(key))
+            {
+                newMetadataString += $" {key}: {val},";
+            }
+        }
+
+        return newMetadataString;
+    }
+
+    public static string LoraHashStringBuilder(string[] loras, bool cache)
+    {
+        if (loras.Length == 0)
+        {
+            return null;
+        }
+
+        string loraDir = ParsedSubfolders().Value<string>("Lora");
+        if (!Path.Exists(loraDir))
+        {
+            Logs.Error("LoRAs were detected in the metadata but didn't find the LoRA folder");
+            return "lora-error";
+        }
+
+        string loraHashes = " Lora hashes: \"";
+
+        for (int i = 0; i < loras.Length; i++)
+        {
+            string loraName = loras[i].Split("/")[^1];
+
+            string[] extensions = [$"{loraName}.safetensors", $"{loraName}.ckpt"];
+            List<string> matchingLoras = [];
+
+            foreach (string extension in extensions)
+            {
+                matchingLoras.AddRange(Directory.GetFiles(loraDir, extension, SearchOption.AllDirectories));
+            }
+
+            if (matchingLoras.Count > 0)
+            {
+                string autoV3Hash = CalculateAutoV3(matchingLoras[0], cache);
+                if (autoV3Hash == null)
+                {
+                    return "lora-error";
+                }
+
+                if (i == loras.Length - 1)
+                {
+                    loraHashes += $"{loraName}: {autoV3Hash}\",";
+                }
+                else
+                {
+                    loraHashes += $"{loraName}: {autoV3Hash}, ";
+                }
+            }
+            else
+            {
+                Logs.Error("No LoRA in the specified LoraFolder path matched the metadata, please check again");
+                return "lora-error";
+            }
+        }
+
+        return loraHashes;
+    }
+
+    public static string CalculateModelHash(string model, bool cache)
+    {
+        string sdDir = ParsedSubfolders().Value<string>("Stable-Diffusion");
+        string unetDir = ParsedSubfolders().Value<string>("Unet");
+
+        if (!Path.Exists(sdDir) || !Path.Exists(unetDir))
+        {
+            Logs.Error("Couldn't find the Stable-Diffusion or Unet directory");
+            return "model-error";
+        }
+
+        string modelName = model.Split("/")[^1];
+
+        string[] extensions = [$"{modelName}.safetensors", $"{modelName}.ckpt", $"{modelName}.sft"];
+        List<string> matchingSDModel = [];
+        List<string> matchingUnetModel = [];
+
+        foreach (string extension in extensions)
+        {
+            matchingSDModel.AddRange(Directory.GetFiles(sdDir, extension, SearchOption.AllDirectories));
+            matchingUnetModel.AddRange(Directory.GetFiles(unetDir, extension, SearchOption.AllDirectories));
+        }
+
+        if (matchingSDModel.Count == 0 && matchingUnetModel.Count == 0)
+        {
+            Logs.Error("No Checkpoint found in Stable-Diffusion and unet folders");
+            return "model-error";
+        }
+
+        string autoV3Hash = matchingSDModel.Count > 0
+            ? CalculateAutoV3(matchingSDModel[0], cache)
+            : CalculateAutoV3(matchingUnetModel[0], cache);
+
+        if (autoV3Hash == null)
+        {
+            return "model-error";
+        }
+
+        return autoV3Hash;
+    }
+
+    public static string CalculateAutoV3(string filePath, bool cache)
+    {
+        if (cache && !Path.Exists(cacheFile))
+        {
+            CreateCacheFile();
+        }
+
+        JObject cacheObj = [];
+
+        if (cache)
+        {
+            try
+            {
+                cacheObj = JObject.Parse(File.ReadAllText(cacheFile));
+
+                if (cacheObj.TryGetValue(Path.GetFileNameWithoutExtension(filePath), out JToken cacheVal) && cacheVal != null)
+                {
+                    return cacheVal.ToString();
+                }
+            }
+            catch (JsonReaderException)
+            {
+                File.Delete(cacheFile);
+                CreateCacheFile();
+                cacheObj = [];
+            }
+        }
+
+        using FileStream reader = File.OpenRead(filePath);
+        byte[] headerLength = new byte[8];
+        reader.ReadExactly(headerLength, 0, 8);
+
+        long length = BitConverter.ToInt64(headerLength, 0);
+        if (length < 0 || length > 100 * 1024 * 1024)
+        {
+            Logs.Error($"[ImgMetadataConverter] Model {Path.GetFileName(filePath)} has invalid metadata length {length}, aborting...");
+            return null;
+        }
+
+        byte[] header = new byte[length];
+        reader.ReadExactly(header, 0, (int)length);
+
+        string headerString = Encoding.UTF8.GetString(header);
+        JObject jsonObj = JObject.Parse(headerString);
+        long position = reader.Position;
+        JObject metadataHeader = (jsonObj["__metadata__"] as JObject) ?? [];
+
+        string hash = (metadataHeader?.ContainsKey("modelspec.hash_sha256") ?? false) ? metadataHeader.Value<string>("modelspec.hash_sha256") : "0x" + Utilities.BytesToHex(SHA256.HashData(reader));
+        string autoV3Hash = hash.StartsWith("0x") ? hash.Substring(2, 12) : hash[..10];
+
+        if (cache)
+        {
+            cacheObj[Path.GetFileNameWithoutExtension(filePath)] = autoV3Hash;
+            File.WriteAllText(cacheFile, JsonConvert.SerializeObject(cacheObj, Formatting.Indented));
+        }
+
+        Logs.Debug($"[ImgMetadataConverter] Calculated hash for {Path.GetFileNameWithoutExtension(filePath)}: {autoV3Hash}");
+
+        return autoV3Hash;
     }
 
     public static void CustomSaveImage(Image image, int batchIndex, T2IParamInput userInput, string metadata, User user, string outputDirectory)

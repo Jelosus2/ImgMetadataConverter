@@ -19,8 +19,7 @@ public static class ImgMetadataConverterAPI
     [API.APIDescription("Saves the configuration for the ImgMetadataConverter extension",
         """
         {
-            "success": bool,
-            "error": string 
+            "success": bool
         }
         """)]
     public static async Task<JObject> SaveImgMetadataConverterSettings(
@@ -51,7 +50,6 @@ public static class ImgMetadataConverterAPI
             Logs.Debug($"{e}");
             return new JObject()
             {
-                ["success"] = false,
                 ["error"] = "Error saving the settings. Check the logs for more information"
             };    
         }
@@ -61,9 +59,9 @@ public static class ImgMetadataConverterAPI
         """
         {
             "success": bool,
+            "active": bool,
             "cache": bool,
-            "outputDirectory": string,
-            "error": string
+            "outputDirectory": string
         }
         """)]
     public static async Task<JObject> LoadImgMetadataConverterSettings(Session session)
@@ -86,7 +84,6 @@ public static class ImgMetadataConverterAPI
             Logs.Debug($"{e}");
             return new JObject()
             {
-                ["success"] = false,
                 ["error"] = "Error loading the settings, loading defaults instead. Check the logs for more information"
             };
         }
