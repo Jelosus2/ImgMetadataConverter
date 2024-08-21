@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using ImgMetadataConverter.WebAPI;
 using Newtonsoft.Json.Linq;
 using SwarmUI.Text2Image;
+using SwarmUI.Accounts;
 
 namespace ImgMetadataConverter;
 
@@ -33,7 +34,8 @@ public class ImgMetadataConverter : Extension
             {
                 ["active"] = false,
                 ["cache"] = true,
-                ["outputDirectory"] = "[SwarmUI.OutputPath]"
+                ["outputDirectory"] = "[SwarmUI.OutputPath]/[SwarmUI.OutPathBuilder]",
+                ["skipDuplicates"] = false
             };
 
             File.WriteAllText(settingsFile, JsonConvert.SerializeObject(defaultSettings, Formatting.Indented));
@@ -63,12 +65,24 @@ public class ImgMetadataConverter : Extension
             return;
         }
 
+        User user = param.UserInput.SourceSession.User;
+
         try
         {
-            string format = param.UserInput.Get(T2IParamTypes.ImageFormat, param.UserInput.SourceSession.User.Settings.FileFormat.ImageFormat);
-            Image image = param.Image.ConvertTo(format, param.UserInput.SourceSession.User.Settings.FileFormat.SaveMetadata ? metadata : null, param.UserInput.SourceSession.User.Settings.FileFormat.DPI);
-            string outputDirectory = settings.Value<string>("outputDirectory").Replace("[SwarmUI.OutputPath]", Program.ServerSettings.Paths.OutputPath);
-            Utils.CustomSaveImage(image, 0, param.UserInput, metadata, param.UserInput.SourceSession.User, Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, outputDirectory));
+            string format = param.UserInput.Get(T2IParamTypes.ImageFormat, user.Settings.FileFormat.ImageFormat);
+            Image image = param.Image.ConvertTo(format, user.Settings.FileFormat.SaveMetadata ? metadata : null, user.Settings.FileFormat.DPI);
+
+            if (!settings.Value<bool>("skipDuplicates"))
+            {
+                string outputDirectory = settings.Value<string>("outputDirectory").Replace("[SwarmUI.OutputPath]", user.OutputDirectory).Replace("[SwarmUI.OutPathBuilder]", "");
+                bool useOutPathBuilder = settings.Value<string>("outputDirectory").Contains("[SwarmUI.OutPathBuilder]");
+                Utils.CustomSaveImage(image, 0, param.UserInput, metadata, user, Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, Utils.PathCleanUp(outputDirectory)), useOutPathBuilder);
+            }
+            else
+            {
+                param.Image.ImageData = image.ImageData;
+                param.Image.Type = Image.ImageType.ANIMATION;
+            }
         }
         catch (Exception e)
         {

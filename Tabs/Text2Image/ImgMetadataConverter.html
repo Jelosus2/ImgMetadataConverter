@@ -39,7 +39,28 @@
                             <b class="translate">Cache</b>
                             (boolean):
                             <br />
-                            <span class="translate slight-left-margin-block">If true, the hashes of the models will be stored in cache to make the process faster.</span>
+                            <span class="translate slight-left-margin-block">If true, the hashes of the hashes will be stored in cache to make the process faster.</span>
+                        </div>
+                        <div class="auto-input auto-checkbox auto-input-flex">
+                            <span class="auto-input-name">
+                                <span class="translate" data-pretranslated="SkipDuplicates">SkipDuplicates</span>
+                                <span class="auto-input-qbutton info-popover-button" onclick="doPopover('imgmetadataconverter_settings_skipduplicates', arguments[0])">?</span>
+                            </span>
+                            <input class="auto-checkbox" type="checkbox" data-name="SkipDuplicates" id="imgmetadataconverter_settings_skipduplicates" data-param_id="skipduplicates" />
+                        </div>
+                        <div class="sui-popover" id="popover_imgmetadataconverter_settings_skipduplicates" data-visible="false">
+                            <b class="translate">SkipDuplicates</b>
+                            (boolean):
+                            <br />
+                            <span class="translate slight-left-margin-block">
+                                If true, only the converted image will be saved.
+                                <br />
+                                <b style="color: yellow;">Warning:</b> When not saving duplicates the file name won't start with <b>converted-...</b>,
+                                <br />
+                                if an error occurs the image will still be saved but with SwarmUI's original metadata
+                                <br />
+                                and the image will be saved in SwarmUI's output path ignoring the extension's one.
+                            </span>
                         </div>
                         <div class="auto-input auto-text-box auto-input-flex auto-input-flex-wide">
                             <label>
@@ -55,9 +76,11 @@
                             (text):
                             <br />
                             <span class="translate slight-left-margin-block">
-                                The directory where the images with the metadata converted will be stored.
+                                The directory where the images with the metadata converted will be stored
                                 <br />
-                                If you wish to use the same path as the OuputPath in Server Settings use <b>[SwarmUI.OutputPath]</b> as the value.
+                                If you wish to use the same path as the OuputPath in Server -> Server Configuration use <b>[SwarmUI.OutputPath]</b> as the value.
+                                <br />
+                                If you wish to use the same path as the Format of the OutPathBuilder in User -> User Settings use <b>[SwarmUI.OutPathBuilder]</b> as the value.
                             </span>
                         </div>
                     </div>

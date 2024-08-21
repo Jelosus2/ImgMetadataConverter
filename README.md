@@ -16,11 +16,12 @@ I appreciate any kind of feedback, if you have a feature request or want to repo
 1. Go to `(SwarmUI)/src/Extensions/ImgMetadataConverter`
 2. Open a cmd in that folder and run `git pull`
 3. Run `update-windows.bat` or `update-linuxmac.sh` to recompile the project.
+4. Launch SwarmUI and go to the `ImgMetadataConverter` tab to apply new settings in case there's any.
 
 ## How to use it
 Once SwarmUI is running you can go to the `ImgMetadataConverter` and change the options. Remember to activate the extension or else it won't work!
 ![demo image](./images/Screenshot_5.png)
-The images with A1111-like metadata will be saved in the **OutputDirectory**. You can use relative and absolute paths for it. If you wish to use the same directory as the one you have in **Server -> Server Settings -> OutputPath** just use `[SwarmUI.OutputPath]` in the field (yes, you can append subdirectories like `[SwarmUI.OutputPath]/mysubdirectory`).
+The images with A1111-like metadata will be saved in the **OutputDirectory**. You can use relative and absolute paths for it. If you wish to use the same directory as the one you have in **Server -> Server Configuration -> Paths** just use `[SwarmUI.OutputPath]` in the field (yes, you can append subdirectories like `[SwarmUI.OutputPath]/mysubdirectory`). You can also use `[SwarmUI.OutPathBuilder]` to use the same directory as in **User -> User Settings -> OutPathBuilder**
 
 Once all setup is done when you generate an image it will automatically save a duplicate in the OutputPath of the extension settings. The file name would start with this: `converted-`.
 

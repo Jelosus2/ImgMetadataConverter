@@ -24,19 +24,36 @@ public static class ImgMetadataConverterAPI
         """)]
     public static async Task<JObject> SaveImgMetadataConverterSettings(
         Session session,
-        [API.APIParameter("Whenever activate the extension or not")] bool active,
-        [API.APIParameter("Whenever cache or not the resource hashes")] bool cache,
-        [API.APIParameter("The directory to save the images with the changed metadata")] string outputDirectory)
+        [API.APIParameter("A JObject containing the settings of the ImgMetadataConverter extension")] JObject parameters)
     {
-        JObject newSettings = new JObject()
-        {
-            ["active"] = active,
-            ["cache"] = cache,
-            ["outputDirectory"] = string.IsNullOrEmpty(outputDirectory) ? "[SwarmUI.OutputPath]" : Utils.PathCleanUp(outputDirectory)
-        };
-
         try
         {
+            List<string> configParameters = ["active", "cache", "outputDirectory", "skipDuplicates"];
+            JObject oldSettings = JObject.Parse(File.ReadAllText(Utils.settingsFile));
+            JObject newSettings = [];
+
+            JObject settings = (JObject)parameters["settings"];
+
+            foreach (string parameter in configParameters)
+            {
+                settings.TryGetValue(parameter, out JToken val);
+                if (val != null)
+                {
+                    if (parameter == "outputDirectory")
+                    {
+                        newSettings.Add(parameter, string.IsNullOrEmpty(val.ToString()) ? "[SwarmUI.OutputPath]/[SwarmUI.OutPathBuilder]" : val);
+                    }
+                    else
+                    {
+                        newSettings.Add(parameter, val);
+                    }
+                }
+                else
+                {
+                    newSettings.Add(parameter, oldSettings[parameter]);
+                }
+            }
+
             string jsonString = JsonConvert.SerializeObject(newSettings, Formatting.Indented);
             File.WriteAllText(Utils.settingsFile, jsonString);
 
@@ -61,7 +78,8 @@ public static class ImgMetadataConverterAPI
             "success": bool,
             "active": bool,
             "cache": bool,
-            "outputDirectory": string
+            "outputDirectory": string,
+            "skipDuplicates": bool
         }
         """)]
     public static async Task<JObject> LoadImgMetadataConverterSettings(Session session)
@@ -75,7 +93,8 @@ public static class ImgMetadataConverterAPI
                 ["success"] = true,
                 ["active"] = settingsObj["active"],
                 ["cache"] = settingsObj["cache"],
-                ["outputDirectory"] = settingsObj["outputDirectory"]
+                ["outputDirectory"] = settingsObj["outputDirectory"],
+                ["skipDuplicates"] = settingsObj["skipDuplicates"]
             };
         }
         catch (Exception e)

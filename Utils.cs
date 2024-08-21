@@ -80,7 +80,8 @@ public static class Utils
         {
             if (!excludeParams.Contains(key))
             {
-                newMetadataString += $" {key}: {val},";
+                string value = val.ToString().Contains(',') ? $"\"{val}\"" : val.ToString();
+                newMetadataString += $" {key}: {value},";
             }
         }
 
@@ -97,7 +98,7 @@ public static class Utils
         string loraDir = ParsedSubfolders().Value<string>("Lora");
         if (!Path.Exists(loraDir))
         {
-            Logs.Error("LoRAs were detected in the metadata but didn't find the LoRA folder");
+            Logs.Error("[ImgMetadataConverter] LoRAs were detected in the metadata but didn't find the LoRA folder");
             return "lora-error";
         }
 
@@ -109,6 +110,8 @@ public static class Utils
 
             string[] extensions = [$"{loraName}.safetensors", $"{loraName}.ckpt"];
             List<string> matchingLoras = [];
+
+            Logs.Debug($"[ImgMetadataConverter] Attempting to search for lora '{loraName}' in {loraDir}");
 
             foreach (string extension in extensions)
             {
@@ -134,7 +137,7 @@ public static class Utils
             }
             else
             {
-                Logs.Error("No LoRA in the specified LoraFolder path matched the metadata, please check again");
+                Logs.Error("[ImgMetadataConverter] No LoRA in the specified LoraFolder path matched the metadata, please check again");
                 return "lora-error";
             }
         }
@@ -149,15 +152,17 @@ public static class Utils
 
         if (!Path.Exists(sdDir) || !Path.Exists(unetDir))
         {
-            Logs.Error("Couldn't find the Stable-Diffusion or Unet directory");
+            Logs.Error("[ImgMetadataConverter] Couldn't find the Stable-Diffusion or Unet directory");
             return "model-error";
         }
 
         string modelName = model.Split("/")[^1];
 
-        string[] extensions = [$"{modelName}.safetensors", $"{modelName}.ckpt", $"{modelName}.sft"];
+        string[] extensions = [$"{modelName}.safetensors", $"{modelName}.ckpt", $"{modelName}.sft", $"{modelName}.engine", $"{modelName}.gguf"];
         List<string> matchingSDModel = [];
         List<string> matchingUnetModel = [];
+
+        Logs.Debug($"[ImgMetadataConverter] Attempting to search for model '{modelName}' in {sdDir} or {unetDir}");
 
         foreach (string extension in extensions)
         {
@@ -167,7 +172,7 @@ public static class Utils
 
         if (matchingSDModel.Count == 0 && matchingUnetModel.Count == 0)
         {
-            Logs.Error("No Checkpoint found in Stable-Diffusion and unet folders");
+            Logs.Error("[ImgMetadataConverter] No Checkpoint found in Stable-Diffusion and unet folders");
             return "model-error";
         }
 
@@ -198,7 +203,8 @@ public static class Utils
             {
                 cacheObj = JObject.Parse(File.ReadAllText(cacheFile));
 
-                if (cacheObj.TryGetValue(Path.GetFileNameWithoutExtension(filePath), out JToken cacheVal) && cacheVal != null)
+                cacheObj.TryGetValue(Path.GetFileNameWithoutExtension(filePath), out JToken cacheVal);
+                if (cacheVal != null)
                 {
                     return cacheVal.ToString();
                 }
@@ -244,7 +250,7 @@ public static class Utils
         return autoV3Hash;
     }
 
-    public static void CustomSaveImage(Image image, int batchIndex, T2IParamInput userInput, string metadata, User user, string outputDirectory)
+    public static void CustomSaveImage(Image image, int batchIndex, T2IParamInput userInput, string metadata, User user, string outputDirectory, bool useOutPathBuilder)
     {
         if (!user.Settings.SaveFiles)
         {
@@ -253,7 +259,7 @@ public static class Utils
         }
         string rawImagePath = user.BuildImageOutputPath(userInput, batchIndex);
         string rawFileName = Path.GetFileNameWithoutExtension(rawImagePath);
-        string fileName = rawFileName.Replace("[number]", "1").Replace(rawFileName, $"converted-{rawFileName}");
+        string imagePath = (useOutPathBuilder ? rawImagePath : rawFileName).Replace("[number]", "1").Replace(rawFileName, $"converted-{rawFileName}");
         string format = userInput.Get(T2IParamTypes.ImageFormat, user.Settings.FileFormat.ImageFormat);
         string extension;
         try
@@ -268,7 +274,7 @@ public static class Utils
         {
             extension = image.Extension;
         }
-        string fullPath = $"{outputDirectory}/{fileName}.{extension}";
+        string fullPath = $"{outputDirectory}/{imagePath}.{extension}";
         lock (user.UserLock)
         {
             try
@@ -277,8 +283,8 @@ public static class Utils
                 while (File.Exists(fullPath))
                 {
                     num++;
-                    fileName = rawImagePath.Contains("[number]") ? rawImagePath.Replace("[number]", $"{num}") : $"{rawImagePath}-{num}";
-                    fullPath = $"{outputDirectory}/{fileName}.{extension}";
+                    imagePath = rawImagePath.Contains("[number]") ? rawImagePath.Replace("[number]", $"{num}") : $"{rawImagePath}-{num}";
+                    fullPath = $"{outputDirectory}/{imagePath}.{extension}";
                 }
                 Directory.CreateDirectory(Directory.GetParent(fullPath).FullName);
                 File.WriteAllBytes(fullPath, image.ImageData);
@@ -292,8 +298,8 @@ public static class Utils
                 string pathA = fullPath;
                 try
                 {
-                    fileName = "image_name_error/" + Utilities.SecureRandomHex(10);
-                    fullPath = $"{outputDirectory}/{fileName}.{extension}";
+                    imagePath = "image_name_error/" + Utilities.SecureRandomHex(10);
+                    fullPath = $"{outputDirectory}/{imagePath}.{extension}";
                     Directory.CreateDirectory(Directory.GetParent(fullPath).FullName);
                     File.WriteAllBytes(fullPath, image.ImageData);
                 }
