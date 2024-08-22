@@ -259,7 +259,7 @@ public static class Utils
         }
         string rawImagePath = user.BuildImageOutputPath(userInput, batchIndex);
         string rawFileName = Path.GetFileNameWithoutExtension(rawImagePath);
-        string imagePath = (useOutPathBuilder ? rawImagePath : rawFileName).Replace("[number]", "1").Replace(rawFileName, $"converted-{rawFileName}");
+        string imagePath = (useOutPathBuilder ? rawImagePath : rawFileName).Replace("[number]", "1").Replace(rawFileName, $"{rawFileName}-converted");
         string format = userInput.Get(T2IParamTypes.ImageFormat, user.Settings.FileFormat.ImageFormat);
         string extension;
         try
@@ -283,7 +283,9 @@ public static class Utils
                 while (File.Exists(fullPath))
                 {
                     num++;
-                    imagePath = rawImagePath.Contains("[number]") ? rawImagePath.Replace("[number]", $"{num}") : $"{rawImagePath}-{num}";
+                    imagePath = rawImagePath.Contains("[number]") 
+                        ? (useOutPathBuilder ? rawImagePath : rawFileName).Replace("[number]", $"{num}").Replace(rawFileName, $"{rawFileName}-converted")
+                        : $"{(useOutPathBuilder ? rawImagePath : rawFileName)}-{num}-converted";
                     fullPath = $"{outputDirectory}/{imagePath}.{extension}";
                 }
                 Directory.CreateDirectory(Directory.GetParent(fullPath).FullName);

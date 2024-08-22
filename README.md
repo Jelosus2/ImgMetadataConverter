@@ -23,7 +23,7 @@ Once SwarmUI is running you can go to the `ImgMetadataConverter` and change the 
 ![demo image](./images/Screenshot_5.png)
 The images with A1111-like metadata will be saved in the **OutputDirectory**. You can use relative and absolute paths for it. If you wish to use the same directory as the one you have in **Server -> Server Configuration -> Paths** just use `[SwarmUI.OutputPath]` in the field (yes, you can append subdirectories like `[SwarmUI.OutputPath]/mysubdirectory`). You can also use `[SwarmUI.OutPathBuilder]` to use the same directory as in **User -> User Settings -> OutPathBuilder**
 
-Once all setup is done when you generate an image it will automatically save a duplicate in the OutputPath of the extension settings. The file name would start with this: `converted-`.
+Once all setup is done when you generate an image it will automatically save a duplicate in the OutputPath of the extension settings. The file name would end with this: `-converted`.
 
 # Common errors.
 If you get erros related to checkpoints or loras not being found make sure your paths for them are correct in **Server -> Server Settings -> Paths**. If they are correct and you still face an issue please open an issue.
