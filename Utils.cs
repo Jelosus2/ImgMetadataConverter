@@ -78,7 +78,7 @@ public static class Utils
 
         foreach ((string key, JToken val) in userInput)
         {
-            if (!excludeParams.Contains(key))
+            if (!excludeParams.Contains(key) && !(key.Contains("initimage") || key.Contains("imageinput")))
             {
                 string value = val.ToString().Contains(',') ? $"\"{val}\"" : val.ToString();
                 newMetadataString += $" {key}: {value},";
