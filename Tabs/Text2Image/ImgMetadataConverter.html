@@ -8,7 +8,7 @@
     <div class="tab-pane tab-pane-vw active show" id="imgmetadataconverter_tab" role="tabpanel" aria-labelledby="maintab_imgmetadataconverter">
         <ul class="nav nav-tabs" role="tablist" id="imgmetadataconvertertablist">
             <li class="nav-item" role="presentation">
-                <a class="nav-link active" href="#imgmetadataconverter-settings" aria-selected="true" role="tab">Settings</a>
+                <a class="nav-link active translate" data-bs-toggle="tab" href="#imgmetadataconverter-settings" id="imgmetadataconvertersettingsbtn" aria-selected="true" role="tab">Settings</a>
             </li>
         </ul>
         <div class="tab-content">
@@ -57,9 +57,9 @@
                                 <br />
                                 <b style="color: yellow;">Warning:</b> When not saving duplicates the file name won't end with <b>...-converted</b>,
                                 <br />
-                                if an error occurs the image will still be saved but with SwarmUI's original metadata
+                                the image will be saved in SwarmUI's output path ignoring the extension's one
                                 <br />
-                                and the image will be saved in SwarmUI's output path ignoring the extension's one.
+                                and if an error occurs the image will still be saved but with SwarmUI's original metadata
                             </span>
                         </div>
                         <div class="auto-input auto-text-box auto-input-flex auto-input-flex-wide">
@@ -79,9 +79,20 @@
                                 The directory where the images with the metadata converted will be stored
                                 <br />
                                 If you wish to use the same path as the OuputPath in Server -> Server Configuration use <b>[SwarmUI.OutputPath]</b> as the value.
-                                <br />
-                                If you wish to use the same path as the Format of the OutPathBuilder in User -> User Settings use <b>[SwarmUI.OutPathBuilder]</b> as the value.
                             </span>
+                        </div>
+                        <div class="auto-input auto-checkbox auto-input-flex">
+                            <span class="auto-input-name">
+                                <span class="translate" data-pretranslated="AppendOutPathBuild">AppendOutPathBuild</span>
+                                <span class="auto-input-qbutton info-popover-button" onclick="doPopover('imgmetadataconverter_settings_appendoutpathbuild', arguments[0])">?</span>
+                            </span>
+                            <input class="auto-checkbox" type="checkbox" data-name="AppendOutPathBuild" id="imgmetadataconverter_settings_appendoutpathbuild" data-param_id="appendoutpathbuild" />
+                        </div>
+                        <div class="sui-popover" id="popover_imgmetadataconverter_settings_appendoutpathbuild">
+                            <b class="translate">AppendOutPathBuild</b>
+                            (boolean):
+                            <br />
+                            <span class="translate slight-left-margin-block">Appends the path of your OutPathBuilder template in <b>User -> User Settings</b> to the OutputDirectory</span>
                         </div>
                     </div>
                 </div>

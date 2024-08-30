@@ -6,7 +6,7 @@ let imgMetadataConverterData = {
     altered: {}
 };
 
-let elementIds = ["active", "cache", "outputDirectory", "skipDuplicates"];
+let elementIds = ["active", "cache", "outputDirectory", "skipDuplicates", "appendOutPathBuild"];
 function buildImgMetadataConverterSettingsMenu(data) {
     for (let elementId of elementIds) {
         let element = document.getElementById(`imgmetadataconverter_settings_${elementId.toLowerCase()}`);
@@ -54,15 +54,15 @@ function buildImgMetadataConverterSettingsMenu(data) {
 
 function loadImgMetadataConverterSettings() {
     genericRequest("LoadImgMetadataConverterSettings", {}, data => {
+        imgMetadataConverterConfirmer.style.display = "none";
+        imgMetadataConverterData.altered = {};
+        imgMetadataConverterData.known = {};
         buildImgMetadataConverterSettingsMenu(data);
     });
 }
 
 function saveImgMetadataConverterSettings() {
     genericRequest("SaveImgMetadataConverterSettings", { settings: imgMetadataConverterData.altered }, data => {
-        imgMetadataConverterConfirmer.style.display = "none";
-        imgMetadataConverterData.known = {};
-        imgMetadataConverterData.altered = {};
         loadImgMetadataConverterSettings();
     });
 }

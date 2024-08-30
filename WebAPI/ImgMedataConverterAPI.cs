@@ -28,7 +28,7 @@ public static class ImgMetadataConverterAPI
     {
         try
         {
-            List<string> configParameters = ["active", "cache", "outputDirectory", "skipDuplicates"];
+            List<string> configParameters = ["active", "cache", "outputDirectory", "skipDuplicates", "appendOutPathBuild"];
             JObject oldSettings = JObject.Parse(File.ReadAllText(Utils.settingsFile));
             JObject newSettings = [];
 
@@ -41,7 +41,7 @@ public static class ImgMetadataConverterAPI
                 {
                     if (parameter == "outputDirectory")
                     {
-                        newSettings.Add(parameter, string.IsNullOrEmpty(val.ToString()) ? "[SwarmUI.OutputPath]/[SwarmUI.OutPathBuilder]" : val);
+                        newSettings.Add(parameter, string.IsNullOrEmpty(val.ToString()) ? "[SwarmUI.OutputPath]" : val);
                     }
                     else
                     {
@@ -79,7 +79,8 @@ public static class ImgMetadataConverterAPI
             "active": bool,
             "cache": bool,
             "outputDirectory": string,
-            "skipDuplicates": bool
+            "skipDuplicates": bool,
+            "appendOutPathBuild": bool
         }
         """)]
     public static async Task<JObject> LoadImgMetadataConverterSettings(Session session)
@@ -94,7 +95,8 @@ public static class ImgMetadataConverterAPI
                 ["active"] = settingsObj["active"],
                 ["cache"] = settingsObj["cache"],
                 ["outputDirectory"] = settingsObj["outputDirectory"],
-                ["skipDuplicates"] = settingsObj["skipDuplicates"]
+                ["skipDuplicates"] = settingsObj["skipDuplicates"],
+                ["appendOutPathBuild"] = settingsObj["appendOutPathBuild"]
             };
         }
         catch (Exception e)

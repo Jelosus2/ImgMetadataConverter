@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SwarmUI.Accounts;
+using SwarmUI.Builtin_ComfyUIBackend;
 using SwarmUI.Core;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
@@ -14,36 +15,29 @@ public static class Utils
 {
     public static readonly string settingsFile = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, "src/Extensions/ImgMetadataConverter", "settings.json");
     public static readonly string cacheFile = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, "src/Extensions/ImgMetadataConverter", "cache.json");
-    public static readonly JObject subfolders = new()
-    {
-        ["SDLoraFolder"] = "Lora",
-        ["unet"] = "Unet",
-        ["SDModelFolder"] = "Stable-Diffusion"
-    };
-    private static readonly Settings.PathsData paths = Program.ServerSettings.Paths;
-
-    public static JObject ParsedSubfolders()
-    {
-        JObject subfoldersObj = [];
-
-        foreach ((string key, JToken val) in subfolders)
-        {
-            subfoldersObj[$"{val}"] = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, paths.ModelRoot, paths.GetFieldValueOrDefault<string>(key) ?? key);
-        }
-
-        return subfoldersObj;
-    }
 
     public static string PathCleanUp(string path)
     {
-        path = Utilities.FilePathForbidden.TrimToNonMatches(path.Replace('\\', '/'));
+        path = path.Replace('\\', '/');
         while (path.Contains("//"))
         {
             path = path.Replace("//", "/");
         }
         path = path.Trim();
         string[] parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-     
+        
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (i == 0 && parts[i].Contains(':') && parts[i].Length == 2)
+            {
+                parts[i] = parts[i];
+            }
+            else
+            {
+                parts[i] = Utilities.FilePathForbidden.TrimToNonMatches(parts[i]);
+            }
+        }
+
         return parts.JoinString("/");
     }
 
@@ -52,33 +46,98 @@ public static class Utils
         File.WriteAllText(cacheFile, "{}");
     }
 
-    public static string FormatMetadata(JObject userInput, JObject settings)
+    public static string FormatMetadata(T2IParamInput userInput, JObject settings)
     {
+        bool cache = settings.Value<bool>("cache");
+
         HashSet<string> excludeParams = ["prompt", "negativeprompt", "cfgscale", "steps", "sampler", "scheduler", "seed", "width", "height", "model", "loras"];
 
-        string prompt = userInput.Value<string>("prompt");
-        string negativePrompt = userInput.Value<string>("negativeprompt") ?? "";
-        string cfgScale = userInput.Value<string>("cfgscale");
-        string steps = userInput.Value<string>("steps");
-        string sampler = userInput.Value<string>("sampler") ?? "euler";
-        string scheduler = userInput.Value<string>("scheduler") ?? "normal";
-        string seed = userInput.Value<string>("seed");
-        string size = $"{userInput.Value<string>("width")}x{userInput.Value<string>("height")}";
-        string model = userInput.Value<string>("model");
+        string prompt = userInput.Get(T2IParamTypes.Prompt);
+        string negativePrompt = userInput.Get(T2IParamTypes.NegativePrompt, "");
+        double cfgScale = userInput.Get(T2IParamTypes.CFGScale);
+        int steps = userInput.Get(T2IParamTypes.Steps);
+        string sampler = userInput.Get(ComfyUIBackendExtension.SamplerParam);
+        string scheduler = userInput.Get(ComfyUIBackendExtension.SchedulerParam);
+        long seed = userInput.Get(T2IParamTypes.Seed);
+        int width = userInput.Get(T2IParamTypes.Width);
+        int height = userInput.Get(T2IParamTypes.Height);
 
-        string loraHashes = LoraHashStringBuilder(userInput.Value<string>("loras")?.Split(",") ?? [], settings.Value<bool>("cache")) ?? "";
-        string modelHash = CalculateModelHash(model, settings.Value<bool>("cache"));
+        T2IModel model = userInput.Get(T2IParamTypes.Model);
+        List<string> loras = userInput.Get(T2IParamTypes.Loras, []); 
+
+        string LoraHashStringBuilder()
+        {
+            if (loras.Count == 0)
+            {
+                return null;
+            }
+
+            string loraHashes = " Lora hashes: \"";
+
+            for (int i = 0; i < loras.Count; i++)
+            {
+                T2IModelHandler loraHandler = Program.T2IModelSets["LoRA"];
+
+                if (!loraHandler.Models.TryGetValue($"{loras[i]}.safetensors", out T2IModel lora))
+                {
+                    if (!loraHandler.Models.TryGetValue(loras[i], out lora))
+                    {
+                        Logs.Error($"[ImgMetadataConverter] LoRA {loras[i]} not found, be sure it's a safetensors file.");
+                        return "lora-error";
+                    }
+                }
+
+                string autoV3Hash = CalculateAutoV3(lora.RawFilePath, cache);
+                if (autoV3Hash == null)
+                {
+                    return "lora-error";
+                }
+
+                if (i == loras.Count - 1)
+                {
+                    loraHashes += $"{loras[i]}: {autoV3Hash}\",";
+                }
+                else
+                {
+                    loraHashes += $"{loras[i]}: {autoV3Hash}, ";
+                }
+                
+            }
+
+            return loraHashes;
+        }
+
+        string CalculateModelHash()
+        {
+            if (!Path.Exists(model.RawFilePath))
+            {
+                Logs.Error($"[ImgMetadataConverter] {model.Title} not found");
+                return "model-error";
+            }
+
+            string autoV3Hash = CalculateAutoV3(model.RawFilePath, cache);
+
+            if (autoV3Hash == null)
+            {
+                return "model-error";
+            }
+
+            return autoV3Hash;
+        }
+
+        string loraHashes = LoraHashStringBuilder() ?? "";
+        string modelHash = CalculateModelHash();
 
         if (loraHashes == "lora-error" || modelHash == "model-error")
         {
             return null;
         }
 
-        string newMetadataString = $"{prompt}\nNegative prompt: {negativePrompt}\nSteps: {steps}, Sampler: {sampler}, Schedule type: {scheduler}, CFG scale: {cfgScale}, Seed: {seed}, Size: {size}, Model hash: {modelHash}, Model: {model},{loraHashes}";
+        string newMetadataString = $"{prompt}\nNegative prompt: {negativePrompt}\nSteps: {steps}, Sampler: {sampler}, Schedule type: {scheduler}, CFG scale: {cfgScale}, Seed: {seed}, Size: {width}x{height}, Model hash: {modelHash}, Model: {model},{loraHashes}";
 
-        foreach ((string key, JToken val) in userInput)
+        foreach ((string key, JToken val) in userInput.ToJSON())
         {
-            if (!excludeParams.Contains(key) && !(key.Contains("initimage") || key.Contains("imageinput")))
+            if (!excludeParams.Contains(key) && val.ToString().Length < 250)
             {
                 string value = val.ToString().Contains(',') ? $"\"{val}\"" : val.ToString();
                 newMetadataString += $" {key}: {value},";
@@ -86,106 +145,6 @@ public static class Utils
         }
 
         return newMetadataString;
-    }
-
-    public static string LoraHashStringBuilder(string[] loras, bool cache)
-    {
-        if (loras.Length == 0)
-        {
-            return null;
-        }
-
-        string loraDir = ParsedSubfolders().Value<string>("Lora");
-        if (!Path.Exists(loraDir))
-        {
-            Logs.Error("[ImgMetadataConverter] LoRAs were detected in the metadata but didn't find the LoRA folder");
-            return "lora-error";
-        }
-
-        string loraHashes = " Lora hashes: \"";
-
-        for (int i = 0; i < loras.Length; i++)
-        {
-            string loraName = loras[i].Split("/")[^1];
-
-            string[] extensions = [$"{loraName}.safetensors", $"{loraName}.ckpt"];
-            List<string> matchingLoras = [];
-
-            Logs.Debug($"[ImgMetadataConverter] Attempting to search for lora '{loraName}' in {loraDir}");
-
-            foreach (string extension in extensions)
-            {
-                matchingLoras.AddRange(Directory.GetFiles(loraDir, extension, SearchOption.AllDirectories));
-            }
-
-            if (matchingLoras.Count > 0)
-            {
-                string autoV3Hash = CalculateAutoV3(matchingLoras[0], cache);
-                if (autoV3Hash == null)
-                {
-                    return "lora-error";
-                }
-
-                if (i == loras.Length - 1)
-                {
-                    loraHashes += $"{loraName}: {autoV3Hash}\",";
-                }
-                else
-                {
-                    loraHashes += $"{loraName}: {autoV3Hash}, ";
-                }
-            }
-            else
-            {
-                Logs.Error("[ImgMetadataConverter] No LoRA in the specified LoraFolder path matched the metadata, please check again");
-                return "lora-error";
-            }
-        }
-
-        return loraHashes;
-    }
-
-    public static string CalculateModelHash(string model, bool cache)
-    {
-        string sdDir = ParsedSubfolders().Value<string>("Stable-Diffusion");
-        string unetDir = ParsedSubfolders().Value<string>("Unet");
-
-        if (!Path.Exists(sdDir) || !Path.Exists(unetDir))
-        {
-            Logs.Error("[ImgMetadataConverter] Couldn't find the Stable-Diffusion or Unet directory");
-            return "model-error";
-        }
-
-        string modelName = model.Split("/")[^1];
-
-        string[] extensions = [$"{modelName}.safetensors", $"{modelName}.ckpt", $"{modelName}.sft", $"{modelName}.engine", $"{modelName}.gguf"];
-        List<string> matchingSDModel = [];
-        List<string> matchingUnetModel = [];
-
-        Logs.Debug($"[ImgMetadataConverter] Attempting to search for model '{modelName}' in {sdDir} or {unetDir}");
-
-        foreach (string extension in extensions)
-        {
-            matchingSDModel.AddRange(Directory.GetFiles(sdDir, extension, SearchOption.AllDirectories));
-            matchingUnetModel.AddRange(Directory.GetFiles(unetDir, extension, SearchOption.AllDirectories));
-        }
-
-        if (matchingSDModel.Count == 0 && matchingUnetModel.Count == 0)
-        {
-            Logs.Error("[ImgMetadataConverter] No Checkpoint found in Stable-Diffusion and unet folders");
-            return "model-error";
-        }
-
-        string autoV3Hash = matchingSDModel.Count > 0
-            ? CalculateAutoV3(matchingSDModel[0], cache)
-            : CalculateAutoV3(matchingUnetModel[0], cache);
-
-        if (autoV3Hash == null)
-        {
-            return "model-error";
-        }
-
-        return autoV3Hash;
     }
 
     public static string CalculateAutoV3(string filePath, bool cache)
@@ -203,8 +162,7 @@ public static class Utils
             {
                 cacheObj = JObject.Parse(File.ReadAllText(cacheFile));
 
-                cacheObj.TryGetValue(Path.GetFileNameWithoutExtension(filePath), out JToken cacheVal);
-                if (cacheVal != null)
+                if (cacheObj.TryGetValue(Path.GetFileNameWithoutExtension(filePath), out JToken cacheVal))
                 {
                     return cacheVal.ToString();
                 }
@@ -233,7 +191,6 @@ public static class Utils
 
         string headerString = Encoding.UTF8.GetString(header);
         JObject jsonObj = JObject.Parse(headerString);
-        long position = reader.Position;
         JObject metadataHeader = (jsonObj["__metadata__"] as JObject) ?? [];
 
         string hash = (metadataHeader?.ContainsKey("modelspec.hash_sha256") ?? false) ? metadataHeader.Value<string>("modelspec.hash_sha256") : "0x" + Utilities.BytesToHex(SHA256.HashData(reader));

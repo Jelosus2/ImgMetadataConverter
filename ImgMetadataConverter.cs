@@ -6,6 +6,7 @@ using ImgMetadataConverter.WebAPI;
 using Newtonsoft.Json.Linq;
 using SwarmUI.Text2Image;
 using SwarmUI.Accounts;
+using SwarmUI.Builtin_ComfyUIBackend;
 
 namespace ImgMetadataConverter;
 
@@ -16,17 +17,12 @@ public class ImgMetadataConverter : Extension
     public override void OnInit()
     {
         Logs.Init("[ImgMetadataConverter] loaded");
-
+        
         ScriptFiles.Add("js/ImgMetadataConverter.js");
         Logs.Debug("[ImgMetadataConverter] Added the script files.");
 
         ImgMetadataConverterAPI.Register();
         Logs.Debug("[ImgMetadataConverter] Registered API callbacks.");
-
-        foreach ((string key, JToken val) in Utils.ParsedSubfolders())
-        {
-            Logs.Debug($"[ImgMetadataConverter] Registered path for {key} folder: {val}");
-        }
 
         if (!Path.Exists(settingsFile))
         {
@@ -34,8 +30,9 @@ public class ImgMetadataConverter : Extension
             {
                 ["active"] = false,
                 ["cache"] = true,
-                ["outputDirectory"] = "[SwarmUI.OutputPath]/[SwarmUI.OutPathBuilder]",
-                ["skipDuplicates"] = false
+                ["outputDirectory"] = "[SwarmUI.OutputPath]",
+                ["skipDuplicates"] = false,
+                ["appendOutPathBuild"] = false
             };
 
             File.WriteAllText(settingsFile, JsonConvert.SerializeObject(defaultSettings, Formatting.Indented));
@@ -59,7 +56,7 @@ public class ImgMetadataConverter : Extension
             return;
         }
 
-        string metadata = Utils.FormatMetadata(param.UserInput.ToJSON(), settings);
+        string metadata = Utils.FormatMetadata(param.UserInput, settings);
         if (metadata == null)
         {
             return;
@@ -74,8 +71,8 @@ public class ImgMetadataConverter : Extension
 
             if (!settings.Value<bool>("skipDuplicates"))
             {
-                string outputDirectory = settings.Value<string>("outputDirectory").Replace("[SwarmUI.OutputPath]", user.OutputDirectory).Replace("[SwarmUI.OutPathBuilder]", "");
-                bool useOutPathBuilder = settings.Value<string>("outputDirectory").Contains("[SwarmUI.OutPathBuilder]");
+                string outputDirectory = settings.Value<string>("outputDirectory").Replace("[SwarmUI.OutputPath]", user.OutputDirectory);
+                bool useOutPathBuilder = settings.Value<bool>("appendOutPathBuild");
                 Utils.CustomSaveImage(image, 0, param.UserInput, metadata, user, Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, Utils.PathCleanUp(outputDirectory)), useOutPathBuilder);
             }
             else
