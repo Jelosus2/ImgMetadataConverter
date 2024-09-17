@@ -16,6 +16,8 @@ public static class Utils
     public static readonly string settingsFile = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, "src/Extensions/ImgMetadataConverter", "settings.json");
     public static readonly string cacheFile = Utilities.CombinePathWithAbsolute(Environment.CurrentDirectory, "src/Extensions/ImgMetadataConverter", "cache.json");
 
+    public static readonly List<string> assetFiles = ["assets/trash-can.svg", "assets/globe.svg", "assets/refresh.svg"];
+
     public static string PathCleanUp(string path)
     {
         path = path.Replace('\\', '/');
@@ -48,8 +50,6 @@ public static class Utils
 
     public static string FormatMetadata(T2IParamInput userInput, JObject settings)
     {
-        bool cache = settings.Value<bool>("cache");
-
         HashSet<string> excludeParams = ["prompt", "negativeprompt", "cfgscale", "steps", "sampler", "scheduler", "seed", "width", "height", "model", "loras"];
 
         string prompt = userInput.Get(T2IParamTypes.Prompt);
@@ -87,7 +87,7 @@ public static class Utils
                     }
                 }
 
-                string autoV3Hash = CalculateAutoV3(lora.RawFilePath, cache);
+                string autoV3Hash = CalculateAutoV3(lora.RawFilePath, loras[i]);
                 if (autoV3Hash == null)
                 {
                     return "lora-error";
@@ -95,13 +95,12 @@ public static class Utils
 
                 if (i == loras.Count - 1)
                 {
-                    loraHashes += $"{loras[i]}: {autoV3Hash}\",";
+                    loraHashes += $"{loras[i].AfterLast('/')}: {autoV3Hash}\",";
                 }
                 else
                 {
-                    loraHashes += $"{loras[i]}: {autoV3Hash}, ";
+                    loraHashes += $"{loras[i].AfterLast('/')}: {autoV3Hash}, ";
                 }
-                
             }
 
             return loraHashes;
@@ -109,13 +108,13 @@ public static class Utils
 
         string CalculateModelHash()
         {
-            if (!Path.Exists(model.RawFilePath))
+            if (!File.Exists(model.RawFilePath))
             {
                 Logs.Error($"[ImgMetadataConverter] {model.Title} not found");
                 return "model-error";
             }
 
-            string autoV3Hash = CalculateAutoV3(model.RawFilePath, cache);
+            string autoV3Hash = CalculateAutoV3(model.RawFilePath, model.Name.BeforeLast('.'));
 
             if (autoV3Hash == null)
             {
@@ -147,9 +146,11 @@ public static class Utils
         return newMetadataString;
     }
 
-    public static string CalculateAutoV3(string filePath, bool cache)
+    public static string CalculateAutoV3(string filePath, string modelName = "")
     {
-        if (cache && !Path.Exists(cacheFile))
+        bool cache = !string.IsNullOrWhiteSpace(modelName);
+
+        if (cache && !File.Exists(cacheFile))
         {
             CreateCacheFile();
         }
@@ -162,7 +163,7 @@ public static class Utils
             {
                 cacheObj = JObject.Parse(File.ReadAllText(cacheFile));
 
-                if (cacheObj.TryGetValue(Path.GetFileNameWithoutExtension(filePath), out JToken cacheVal))
+                if (cacheObj.TryGetValue(modelName, out JToken cacheVal))
                 {
                     return cacheVal.ToString();
                 }
@@ -198,11 +199,11 @@ public static class Utils
 
         if (cache)
         {
-            cacheObj[Path.GetFileNameWithoutExtension(filePath)] = autoV3Hash;
+            cacheObj[modelName] = autoV3Hash;
             File.WriteAllText(cacheFile, JsonConvert.SerializeObject(cacheObj, Formatting.Indented));
         }
 
-        Logs.Debug($"[ImgMetadataConverter] Calculated hash for {Path.GetFileNameWithoutExtension(filePath)}: {autoV3Hash}");
+        Logs.Debug($"[ImgMetadataConverter] Calculated hash for {modelName}: {autoV3Hash}");
 
         return autoV3Hash;
     }

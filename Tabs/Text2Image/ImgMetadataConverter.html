@@ -10,6 +10,9 @@
             <li class="nav-item" role="presentation">
                 <a class="nav-link active translate" data-bs-toggle="tab" href="#imgmetadataconverter-settings" id="imgmetadataconvertersettingsbtn" aria-selected="true" role="tab">Settings</a>
             </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link translate" data-bs-toggle="tab" href="#imgmetadataconverter-hashtable" id="imgmetadataconverterhashtablebtn" aria-selected="false" tabindex="-1" role="tab">Hash Table</a>
+            </li>
         </ul>
         <div class="tab-content">
             <div class="tab-pane show active" id="imgmetadataconverter-settings" role="tabpanel">
@@ -96,6 +99,38 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="tab-pane" id="imgmetadataconverter-hashtable" role="tabpanel">
+                <div class="card-center-container">
+                    <div class="auto-input-flex" style="gap: 20px;">
+                        <button type="button" class="btn basic-button translate" onclick="calculateImgMetadataConverterHash('overwrite')">Calculate All Hashes (Overwrite)</button>
+                        <button type="button" class="btn btn-danger translate" onclick="deleteImgMetadataConverterHashes()">Delete All Hashes</button>
+                        <button type="button" class="btn basic-button translate" onclick="calculateImgMetadataConverterHash('missing')">Calculate All Hashes (Missing ones)</button>
+                    </div>
+                </div>
+                <div class="card-center-container">
+                    <span id="imgmetadataconverter_hashtable_statusmsg" class="translate"></span>
+                </div>
+                <div class="card-center-container">
+                    <table class="simple-table">
+                        <tbody id="imgmetadataconverter_hashtable_tbody">
+                            <tr style="text-align: center;">
+                                <th class="translate">Resource</th>
+                                <th class="translate">Hash (AutoV3)</th>
+                                <th class="translate">Delete Hash</th>
+                                <th class="translate">Calculate Hash</th>
+                                <th class="translate">Civitai Results</th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-center-container">
+                    <span id="imgmetadataconverter_hashtable_civitai_result_msg" class="translate"></span>
+                </div>
+                <div class="card-center-container" id="imgmetadataconverter_hashtable_civitai_results_container"></div>
+                <br />
+                <br />
+                <br />
             </div>
         </div>
         <div class="settings_submit_confirmer" id="imgmetadataconverter_settings_confirmer" style="display: none;">

@@ -6,7 +6,6 @@ using ImgMetadataConverter.WebAPI;
 using Newtonsoft.Json.Linq;
 using SwarmUI.Text2Image;
 using SwarmUI.Accounts;
-using SwarmUI.Builtin_ComfyUIBackend;
 
 namespace ImgMetadataConverter;
 
@@ -20,6 +19,9 @@ public class ImgMetadataConverter : Extension
         
         ScriptFiles.Add("js/ImgMetadataConverter.js");
         Logs.Debug("[ImgMetadataConverter] Added the script files.");
+
+        OtherAssets.AddRange(Utils.assetFiles);
+        Logs.Debug("[ImgMetadataConverter] Added the asset files.");
 
         ImgMetadataConverterAPI.Register();
         Logs.Debug("[ImgMetadataConverter] Registered API callbacks.");

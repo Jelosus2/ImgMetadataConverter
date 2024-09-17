@@ -25,5 +25,14 @@ The images with A1111-like metadata will be saved in the **OutputDirectory**. Yo
 
 Once all setup is done when you generate an image it will automatically save a duplicate in the OutputPath of the extension settings. The file name would end with this: `-converted`. Unless you enable the `SkipDuplicates` option, in that case the image will be saved on the swarm's default output directory and with no `-converted` at the end but it will still have the A1111-like metadata.
 
+## Hash Table
+
+![hash table](./images/Screenshot_6.png)
+
+In the hash table you can delete and calculate hashes (autoV3 format) for your resources stored in SwarmUI so they don't get calculated while in the process of generating an image. You can also search for the resource on CivitAI directly from the table if it has the hash calculated. Note that resources that are old may not have the hash calculated on CivitAI's side, in that case you will have to search for it manually.
+
 # Common errors.
-If you get erros related to checkpoints or loras not being found make sure your paths for them are correct in **Server -> Server Settings -> Paths**. If they are correct and you still face an issue please open an issue.
+
+\- If you get erros related to checkpoints or loras not being found make sure your paths for them are correct in **Server -> Server Settings -> Paths**. If they are correct and you still face an issue please open an issue.
+
+\- If you get errors when launching SwarmUI with the extension update SwarmUI and try again. If the error persists open an issue.
