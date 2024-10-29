@@ -16,14 +16,17 @@ namespace ImgMetadataConverter.WebAPI;
 [API.APIClass("API routes related to ImgMetadataConverter extension")]
 public static class ImgMetadataConverterAPI
 {
+    public static PermInfoGroup ImgMetadataConverterPermGroup = new("ImgMetadataConverter", "Permissions related to the extension");
+    public static PermInfo defaultPermission = Permissions.Register(new("img_metadata_converter_default", "ImgMetadataConverter Default", "The default permissions for the extension", PermissionDefault.USER, ImgMetadataConverterPermGroup));
+
     public static void Register()
     {
-        API.RegisterAPICall(SaveImgMetadataConverterSettings, true);
-        API.RegisterAPICall(LoadImgMetadataConverterSettings);
-        API.RegisterAPICall(LoadModelsWithImgMetadataConverterHashes);
-        API.RegisterAPICall(DeleteImgMetadataConverterHashes, true);
-        API.RegisterAPICall(CalculateImgMetadataConverterHashWS, true);
-        API.RegisterAPICall(SearchModelOnCivitaiByHash);
+        API.RegisterAPICall(SaveImgMetadataConverterSettings, true, defaultPermission);
+        API.RegisterAPICall(LoadImgMetadataConverterSettings, false, defaultPermission);
+        API.RegisterAPICall(LoadModelsWithImgMetadataConverterHashes, false, defaultPermission);
+        API.RegisterAPICall(DeleteImgMetadataConverterHashes, true, defaultPermission);
+        API.RegisterAPICall(CalculateImgMetadataConverterHashWS, true, defaultPermission);
+        API.RegisterAPICall(SearchModelOnCivitaiByHash, false, defaultPermission);
     }
 
     [API.APIDescription("Saves the configuration for the ImgMetadataConverter extension",

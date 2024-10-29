@@ -108,6 +108,11 @@ public static class Utils
 
         string CalculateModelHash()
         {
+            if (model.Name.AfterLast(".") == "gguf")
+            {
+                return "\"\"";
+            }
+
             if (!File.Exists(model.RawFilePath))
             {
                 Logs.Error($"[ImgMetadataConverter] {model.Title} not found");
